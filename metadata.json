@@ -1,0 +1,6 @@
+{
+  "name": "Workplace Weekly Timecard & Hour Tracker",
+  "description": "Desktop calendar app to log week-by-week work hours, task breakdowns, daily notes, non-working day reasons, 40-hour goal status, weekday clock-in/out reminders, and manager timecard reports (CSV/PDF).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

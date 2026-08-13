@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+:root {
+    --bg-main: #f1f5f9;
+    /* slate-100 */
+    --bg-card: #ffffff;
+    /* white */
+    --text-main: #1e293b;
+    /* slate-800 */
+    --text-muted: #64748b;
+    /* slate-500 */
+    --border-color: #e2e8f0;
+    /* slate-200 */
+}
+
+[data-theme="dark"] {
+    --bg-main: #0f172a;
+    --bg-card: #1e293b;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --border-color: #334155;
+}
+
+[data-theme="warm"] {
+    /* Richer, darker warm tone with high contrast text */
+    --bg-main: #e6dac3;
+    --bg-card: #fcf6eb;
+    --text-main: #2b1f12;
+    --text-muted: #6e5c47;
+    --border-color: #d1c1a7;
+}
+
+/* Force base backgrounds */
+html,
+body,
+#root {
+    background-color: var(--bg-main) !important;
+    color: var(--text-main) !important;
+}
+
+/* Intercept Tailwind utility classes (Including opacity modifiers!) */
+[data-theme="dark"] .bg-white,
+[data-theme="warm"] .bg-white {
+    background-color: var(--bg-card) !important;
+}
+
+[data-theme="dark"] .bg-slate-100,
+[data-theme="warm"] .bg-slate-100,
+[data-theme="dark"] .bg-slate-50,
+[data-theme="warm"] .bg-slate-50,
+[data-theme="dark"] .bg-slate-100\/70,
+[data-theme="warm"] .bg-slate-100\/70,
+[data-theme="dark"] .bg-slate-50\/50,
+[data-theme="warm"] .bg-slate-50\/50,
+[data-theme="dark"] .bg-slate-50\/80,
+[data-theme="warm"] .bg-slate-50\/80 {
+    background-color: var(--bg-main) !important;
+}
+
+[data-theme="dark"] .text-slate-900,
+[data-theme="warm"] .text-slate-900,
+[data-theme="dark"] .text-slate-800,
+[data-theme="warm"] .text-slate-800,
+[data-theme="dark"] .text-slate-700,
+[data-theme="warm"] .text-slate-700 {
+    color: var(--text-main) !important;
+}
+
+[data-theme="dark"] .text-slate-600,
+[data-theme="warm"] .text-slate-600,
+[data-theme="dark"] .text-slate-500,
+[data-theme="warm"] .text-slate-500,
+[data-theme="dark"] .text-slate-400,
+[data-theme="warm"] .text-slate-400 {
+    color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .border-slate-200,
+[data-theme="warm"] .border-slate-200,
+[data-theme="dark"] .border-slate-300,
+[data-theme="warm"] .border-slate-300,
+[data-theme="dark"] .border-slate-200\/90,
+[data-theme="warm"] .border-slate-200\/90 {
+    border-color: var(--border-color) !important;
+}
