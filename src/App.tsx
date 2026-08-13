@@ -32,7 +32,7 @@ export default function App() {
   // Current week selection
   const [mondayDate, setMondayDate] = useState<Date>(() => getWeekMonday(new Date()));
 
-  // State Variables (Init with empty/default, filled by Firebase immediately)
+  // State Variables 
   const [user, setUser] = useState<UserProfile>(initialUserProfile);
   const [reminders, setReminders] = useState<ReminderSettings>(initialReminderSettings);
   const [weekLogsMap, setWeekLogsMap] = useState<Record<string, DayLog[]>>({});
@@ -51,7 +51,6 @@ export default function App() {
   useEffect(() => {
     const docRef = doc(db, 'appData', 'my-timecard');
 
-    // onSnapshot constantly listens to the cloud. If you edit on your phone, your desktop updates instantly!
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
@@ -61,12 +60,10 @@ export default function App() {
         if (data.weekLogsMap) {
           setWeekLogsMap(data.weekLogsMap);
         } else {
-          // Initialize first week if brand new database
           const initialKey = formatDateKey(getWeekMonday(new Date()));
           setWeekLogsMap({ [initialKey]: createSampleWeekLogs(getWeekMonday(new Date())) });
         }
       } else {
-        // If document doesn't exist yet, push initial data
         const initialKey = formatDateKey(getWeekMonday(new Date()));
         const initialMap = { [initialKey]: createSampleWeekLogs(getWeekMonday(new Date())) };
         setWeekLogsMap(initialMap);
@@ -79,23 +76,25 @@ export default function App() {
   }, []);
 
   // ==========================================
-  // 2. CLOUD SYNC: Write to Firebase
+  // 2. CLOUD SYNC: Write to Firebase (Sanitized)
   // ==========================================
   useEffect(() => {
     if (!isDbLoaded) return;
-    setDoc(doc(db, 'appData', 'my-timecard'), { user }, { merge: true });
+    const cleanUser = JSON.parse(JSON.stringify(user));
+    setDoc(doc(db, 'appData', 'my-timecard'), { user: cleanUser }, { merge: true });
   }, [user, isDbLoaded]);
 
   useEffect(() => {
     if (!isDbLoaded) return;
-    setDoc(doc(db, 'appData', 'my-timecard'), { reminders }, { merge: true });
+    const cleanReminders = JSON.parse(JSON.stringify(reminders));
+    setDoc(doc(db, 'appData', 'my-timecard'), { reminders: cleanReminders }, { merge: true });
   }, [reminders, isDbLoaded]);
 
   useEffect(() => {
     if (!isDbLoaded) return;
-    setDoc(doc(db, 'appData', 'my-timecard'), { weekLogsMap }, { merge: true });
+    const cleanWeekLogsMap = JSON.parse(JSON.stringify(weekLogsMap));
+    setDoc(doc(db, 'appData', 'my-timecard'), { weekLogsMap: cleanWeekLogsMap }, { merge: true });
   }, [weekLogsMap, isDbLoaded]);
-
 
   // Show loading screen while connecting to cloud
   if (!isDbLoaded) {
@@ -129,7 +128,7 @@ export default function App() {
   const handleQuickToggleStatus = (dateStr: string, newStatus: WorkStatus) => {
     const updatedWeek = currentDays.map(d => {
       if (d.date === dateStr) {
-        return { ...d, status: newStatus, totalActiveHours: 0, startTime: '', endTime: '', nonWorkingReason: newStatus === 'non_working' ? 'PTO / Vacation' : undefined };
+        return { ...d, status: newStatus, totalActiveHours: 0, startTime: '', endTime: '', nonWorkingReason: newStatus === 'non_working' ? 'PTO / Vacation' : '' };
       }
       return d;
     });
@@ -139,7 +138,7 @@ export default function App() {
   const handleClearDay = (dateStr: string) => {
     const updatedWeek = currentDays.map(d => {
       if (d.date === dateStr) {
-        return { ...d, status: 'working' as WorkStatus, startTime: '', endTime: '', totalActiveHours: 0, notes: '', tasks: [], breaks: [], nonWorkingReason: undefined, isManualHoursOverride: false };
+        return { ...d, status: 'working' as WorkStatus, startTime: '', endTime: '', totalActiveHours: 0, notes: '', tasks: [], breaks: [], nonWorkingReason: '', isManualHoursOverride: false };
       }
       return d;
     });
@@ -148,7 +147,7 @@ export default function App() {
 
   const handleClearWeek = () => {
     const clearedWeek = currentDays.map(d => ({
-      ...d, status: 'working' as WorkStatus, startTime: '', endTime: '', totalActiveHours: 0, notes: '', tasks: [], breaks: [], nonWorkingReason: undefined, isManualHoursOverride: false
+      ...d, status: 'working' as WorkStatus, startTime: '', endTime: '', totalActiveHours: 0, notes: '', tasks: [], breaks: [], nonWorkingReason: '', isManualHoursOverride: false
     }));
     setWeekLogsMap(prev => ({ ...prev, [currentMondayKey]: clearedWeek }));
   };
