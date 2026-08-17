@@ -133,14 +133,12 @@ export const ManagerReportModal: React.FC<ManagerReportModalProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleOpenMailClient = () => {
-    const mailtoUrl = `mailto:${encodeURIComponent(recipientEmail)}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(compiledEmailBody)}`;
-    window.location.href = mailtoUrl;
-  };
+  const handleOpenGmail = () => {
+    // This is the official Gmail compose URL format
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(recipientEmail)}&su=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(compiledEmailBody)}`;
 
-  const handleSendSimulatedEmail = () => {
-    setEmailSentSuccess(true);
-    setTimeout(() => setEmailSentSuccess(false), 4000);
+    // Open Gmail in a new browser tab
+    window.open(gmailUrl, '_blank');
   };
 
   return (
@@ -393,16 +391,12 @@ export const ManagerReportModal: React.FC<ManagerReportModalProps> = ({
                 </div>
 
                 <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-200">
-                  <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <button onClick={handleOpenMailClient} className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-800 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 w-full sm:w-auto justify-center">
-                      <Mail className="w-4 h-4 text-indigo-600" /> <span>Open in Mail Client</span>
-                    </button>
-                    <button onClick={handleCopyText} className="px-3 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1">
-                      {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-500" />} <span>{copied ? 'Copied!' : 'Copy Body'}</span>
-                    </button>
-                  </div>
-                  <button onClick={handleSendSimulatedEmail} className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 transition-all flex items-center gap-2 w-full sm:w-auto justify-center">
-                    <Send className="w-4 h-4" /> <span>Send Email to Manager</span>
+                  <button onClick={handleCopyText} className="px-3 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1 w-full sm:w-auto">
+                    {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-500" />} <span>{copied ? 'Copied!' : 'Copy Body Text'}</span>
+                  </button>
+
+                  <button onClick={handleOpenGmail} className="px-6 py-2.5 bg-[#EA4335] hover:bg-[#D93025] text-white rounded-xl text-xs font-bold shadow-md shadow-red-600/20 transition-all flex items-center gap-2 w-full sm:w-auto justify-center">
+                    <Mail className="w-4 h-4" /> <span>Open in Gmail</span>
                   </button>
                 </div>
 
