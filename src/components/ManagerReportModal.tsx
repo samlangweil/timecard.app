@@ -39,19 +39,14 @@ export const ManagerReportModal: React.FC<ManagerReportModalProps> = ({
   const hoursDiff = totalWorkedHours - targetHours;
   const isGoalMet = totalWorkedHours >= targetHours;
 
-  // Clean the manager name (removes anything in parentheses like titles) for the formal record metadata
   const cleanManagerName = user.managerName.replace(/\s*\(.*?\)\s*/g, '').trim();
-
-  // Hard-linked Profile Variables & Exact Subject formatting
   const recipientEmail = user.managerEmail || 'manager@company.com';
   const emailSubject = `Weekly Timecard: ${weekLabel}`;
 
-  // Extract manager first name from email (firstname.lastname@...)
   const emailPrefix = recipientEmail.split('@')[0];
   const rawFirstName = emailPrefix.split('.')[0];
   const managerFirstName = rawFirstName.charAt(0).toUpperCase() + rawFirstName.slice(1).toLowerCase();
 
-  // Dynamically compile the email body every time it renders
   const generateCompiledEmailBody = () => {
     let body = `${managerFirstName},\n\n`;
 
@@ -168,14 +163,14 @@ export const ManagerReportModal: React.FC<ManagerReportModalProps> = ({
             <div className="bg-slate-200/70 p-1 rounded-xl border border-slate-300/50 flex items-center text-xs font-bold">
               <button
                 onClick={() => setActiveTab('preview')}
-                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${activeTab === 'preview' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'}`}
+                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${activeTab === 'preview' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
               >
                 <FileText className="w-3.5 h-3.5" />
                 <span>Timecard View</span>
               </button>
               <button
                 onClick={() => setActiveTab('email')}
-                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${activeTab === 'email' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'}`}
+                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${activeTab === 'email' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
               >
                 <Mail className="w-3.5 h-3.5 text-indigo-600" />
                 <span>Email to Manager</span>
@@ -188,10 +183,11 @@ export const ManagerReportModal: React.FC<ManagerReportModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-slate-50/50">
+        <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-white">
 
           {activeTab === 'preview' ? (
             <>
+              {/* Notice Banner & Toggle */}
               <div className="bg-indigo-50/60 border border-indigo-100 text-indigo-900 rounded-xl p-3 text-xs flex flex-col sm:flex-row items-center justify-between gap-2">
                 <span className="flex items-center gap-2 font-medium">
                   <CalendarCheck className="w-4 h-4 text-indigo-600 shrink-0" />
@@ -200,20 +196,22 @@ export const ManagerReportModal: React.FC<ManagerReportModalProps> = ({
                 <div className="bg-white p-0.5 rounded-lg border border-indigo-200 flex items-center text-[11px]">
                   <button
                     onClick={() => setReportMode('barebones')}
-                    className={`px-2.5 py-1 font-bold rounded-md transition-all ${reportMode === 'barebones' ? 'bg-indigo-600 text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'}`}
+                    className={`px-2.5 py-1 font-bold rounded-md transition-all ${reportMode === 'barebones' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
                   >
                     Barebones
                   </button>
                   <button
                     onClick={() => setReportMode('detailed')}
-                    className={`px-2.5 py-1 font-bold rounded-md transition-all ${reportMode === 'detailed' ? 'bg-indigo-600 text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'}`}
+                    className={`px-2.5 py-1 font-bold rounded-md transition-all ${reportMode === 'detailed' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
                   >
                     Detailed
                   </button>
                 </div>
               </div>
 
-              <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-6 text-slate-800">
+              {/* PDF VISUAL PREVIEW AREA */}
+              <div className="space-y-6">
+
                 <div className="flex flex-col sm:flex-row justify-between border-b border-slate-200 pb-4 gap-4">
                   <div>
                     <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">Official Workplace Record</span>
@@ -227,114 +225,87 @@ export const ManagerReportModal: React.FC<ManagerReportModalProps> = ({
                   </div>
                 </div>
 
-                <div className={`rounded-xl p-4 border flex items-center justify-between ${isGoalMet ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-amber-50 border-amber-200 text-amber-900'}`}>
+                <div className={`rounded-xl p-4 border flex items-center justify-between bg-amber-50 border-amber-200 text-amber-900 shadow-sm`}>
                   <div className="flex items-center space-x-3">
                     {isGoalMet ? <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" /> : <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0" />}
                     <div>
                       <h4 className="text-sm font-bold">Total Active Work Hours: {totalWorkedHours.toFixed(1)} hrs</h4>
                       <p className="text-xs opacity-90 mt-0.5">
-                        {isGoalMet ? `Target of ${targetHours}h met (+${hoursDiff.toFixed(1)} hrs overtime).` : `Shortfall of ${Math.abs(hoursDiff).toFixed(1)} hrs below the ${targetHours}-hour target.`}
+                        {isGoalMet ? `Target met (+${hoursDiff.toFixed(1)} hrs over target).` : `Shortfall of ${Math.abs(hoursDiff).toFixed(1)} hrs below the ${targetHours}-hour target.`}
                       </p>
                     </div>
                   </div>
-                  <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-white border border-current shadow-2xs">
+                  <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-white border border-amber-600/30 text-amber-800 shadow-sm">
                     {isGoalMet ? 'TARGET MET' : 'SHORTFALL'}
                   </span>
                 </div>
 
                 <div>
                   <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
-                    {reportMode === 'barebones' ? 'Daily Work Notice' : 'Granular Daily Work & Task Log'}
+                    Daily Work Notice
                   </h4>
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {reportDays.map(d => {
                       const isWorking = d.status === 'working';
                       const timeline = generateDailyTimeline(d);
 
                       return (
-                        <div key={d.date} className="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-2xs flex flex-col md:flex-row gap-4 md:items-start">
-                          <div className="w-full md:w-1/4 shrink-0">
-                            <div className="font-bold text-slate-900">{formatShortDate(d.date)}</div>
-                            <div className="mt-1">
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isWorking ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
-                                {isWorking ? 'Working' : 'Not Working'}
-                              </span>
+                        <div key={d.date} className="bg-[#FAF9F6] border border-[#E5E0D8] rounded-2xl p-4 shadow-sm flex flex-col md:flex-row gap-4 md:items-stretch">
+
+                          {/* Left Column */}
+                          <div className="w-full md:w-32 shrink-0 flex flex-col justify-start pt-1">
+                            <div className="font-bold text-slate-900 text-sm">{formatShortDate(d.date)}</div>
+                            <div className="mt-2">
+                              {isWorking ? (
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">Working</span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">Off</span>
+                              )}
                             </div>
-                            {reportMode === 'detailed' && (
-                              <div className="text-[11px] font-mono text-slate-500 mt-2">
-                                {isWorking ? `${format12HourTime(d.startTime)} – ${format12HourTime(d.endTime)}` : 'N/A'}
-                              </div>
-                            )}
                           </div>
 
-                          <div className="flex-1 w-full space-y-2">
-                            {!isWorking && (
-                              <div className="text-sm font-semibold text-amber-800">
-                                Reason: {d.nonWorkingReason || 'Not specified'}
-                              </div>
-                            )}
+                          {/* Middle Column (White Info Box) */}
+                          <div className="flex-1 w-full bg-white border border-[#E5E0D8] rounded-xl p-3 flex flex-col justify-center">
+                            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                              {isWorking ? 'LOGGED TIME' : 'REASON'}
+                            </div>
+                            <div className="text-sm text-slate-900 font-mono font-medium">
+                              {isWorking ? `${format12HourTime(d.startTime)}  -  ${format12HourTime(d.endTime)}` : (d.nonWorkingReason || 'No reason specified')}
+                            </div>
 
-                            {isWorking && reportMode === 'detailed' && timeline.length > 0 && (
-                              <div className="space-y-1 mt-1">
-                                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Timeline Log</div>
-                                <ul className="space-y-1.5 ml-1">
-                                  {timeline.map(event => (
-                                    <li key={event.id} className="text-xs flex items-start gap-2">
-                                      {event.type === 'task' ? (
-                                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-1 shrink-0"></span>
-                                      ) : (
-                                        <Coffee className="w-3 h-3 text-orange-500 mt-0.5 shrink-0" />
-                                      )}
-                                      <span className="leading-tight flex flex-col">
-                                        <span className={event.type === 'break' ? 'text-orange-900 font-medium' : 'text-slate-700'}>
-                                          {event.title} <span className={`font-bold ${event.type === 'break' ? 'text-orange-700' : 'text-indigo-700'}`}>({event.hours}h)</span>
-                                        </span>
-                                        <span className={`${event.type === 'break' ? 'text-orange-600' : 'text-slate-500'} text-[9px] font-mono mt-0.5`}>
-                                          {event.timeDisplay}
-                                        </span>
-                                      </span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-
-                            {isWorking && reportMode === 'detailed' && d.notes && (
-                              <div className="bg-white border border-slate-200 rounded-lg p-3 mt-2">
-                                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Personal Note</div>
-                                <div className="text-xs text-slate-700 italic leading-relaxed whitespace-pre-wrap break-words">{d.notes}</div>
-                              </div>
-                            )}
-
-                            {isWorking && reportMode === 'barebones' && (
-                              <div className="bg-white border border-slate-200 rounded-lg p-3 mt-2 space-y-2">
-                                <div>
-                                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Logged Time</div>
-                                  <div className="text-xs text-slate-700 font-mono leading-relaxed whitespace-pre-wrap break-words">
-                                    {format12HourTime(d.startTime)} – {format12HourTime(d.endTime)}
-                                  </div>
-                                </div>
-                                {d.breaks && d.breaks.length > 0 && (
-                                  <div className="pt-2 border-t border-slate-100">
-                                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Breaks Logged</div>
+                            {/* Detailed Info Rendered only if 'detailed' toggle is selected */}
+                            {isWorking && reportMode === 'detailed' && (
+                              <div className="mt-3 pt-3 border-t border-slate-100 space-y-3">
+                                {timeline.length > 0 && (
+                                  <div>
+                                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Timeline Log</div>
                                     <ul className="space-y-1">
-                                      {d.breaks.map(b => (
-                                        <li key={b.id} className="text-xs text-slate-700 flex items-center gap-1.5">
-                                          <Coffee className="w-3 h-3 text-orange-500 shrink-0" />
-                                          <span>{b.reason}: <span className="font-mono text-slate-500">{format12HourTime(b.startTime)} – {format12HourTime(b.endTime)}</span></span>
+                                      {timeline.map(event => (
+                                        <li key={event.id} className="text-xs text-slate-800 flex items-start gap-1.5">
+                                          {event.type === 'task' ? <span className="text-slate-400 mt-0.5">•</span> : <Coffee className="w-3 h-3 text-orange-500 mt-0.5" />}
+                                          <span>
+                                            {event.title} <strong className={event.type === 'task' ? 'text-indigo-600' : 'text-orange-600'}>({event.hours}h)</strong> <span className="text-slate-400 font-mono text-[10px]">[{event.timeDisplay}]</span>
+                                          </span>
                                         </li>
                                       ))}
                                     </ul>
+                                  </div>
+                                )}
+                                {d.notes && (
+                                  <div>
+                                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Notes</div>
+                                    <div className="text-xs text-slate-600 italic leading-relaxed whitespace-pre-wrap">{d.notes}</div>
                                   </div>
                                 )}
                               </div>
                             )}
                           </div>
 
-                          <div className="w-full md:w-20 shrink-0 text-left md:text-right mt-2 md:mt-0">
+                          {/* Right Column (Total Hours) */}
+                          <div className="w-full md:w-24 shrink-0 flex flex-col justify-center items-end md:items-center text-right md:text-center mt-2 md:mt-0">
                             <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Total</div>
-                            <div className="text-lg font-black text-slate-900 font-mono">
-                              {isWorking ? `${d.totalActiveHours.toFixed(1)}h` : '0.0h'}
+                            <div className="text-xl font-black text-slate-900 font-mono">
+                              {isWorking ? d.totalActiveHours.toFixed(1) : '0.0'}h
                             </div>
                           </div>
 
@@ -343,7 +314,9 @@ export const ManagerReportModal: React.FC<ManagerReportModalProps> = ({
                     })}
                   </div>
                 </div>
+
               </div>
+              {/* END PREVIEW AREA */}
             </>
           ) : (
             /* ================= EMAIL COMPOSITION TAB ================= */
@@ -414,7 +387,7 @@ export const ManagerReportModal: React.FC<ManagerReportModalProps> = ({
                     <Paperclip className="w-4 h-4 text-indigo-600 shrink-0" />
                     <span><strong>Official PDF Report Included:</strong> Download the PDF to attach directly.</span>
                   </div>
-                  <button onClick={() => exportToPDF(reportDays, user, mondayDate, reportMode === 'barebones')} className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs shadow-2xs shrink-0 flex items-center gap-1">
+                  <button onClick={() => exportToPDF(reportDays, user, mondayDate, reportMode === 'barebones')} className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs shadow-sm shrink-0 flex items-center gap-1">
                     <Download className="w-3.5 h-3.5" /> Download PDF
                   </button>
                 </div>
@@ -442,7 +415,7 @@ export const ManagerReportModal: React.FC<ManagerReportModalProps> = ({
         {/* Modal Footer Actions */}
         <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <button onClick={handleCopyText} className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-2xs w-full sm:w-auto">
+            <button onClick={handleCopyText} className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-sm w-full sm:w-auto">
               {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-500" />} <span>{copied ? 'Copied Summary Text!' : 'Copy Summary Text'}</span>
             </button>
             {activeTab === 'preview' && (
@@ -455,6 +428,7 @@ export const ManagerReportModal: React.FC<ManagerReportModalProps> = ({
             <button onClick={() => exportToCSV(reportDays, user, mondayDate)} className="px-4 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5">
               <Download className="w-4 h-4 text-emerald-600" /> <span>Export CSV</span>
             </button>
+
             <button onClick={() => exportToPDF(reportDays, user, mondayDate, reportMode === 'barebones')} className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/20 transition-all flex items-center gap-1.5">
               <Download className="w-4 h-4" /> <span>Download Official PDF</span>
             </button>
