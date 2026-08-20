@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from './firebase';
-import { DayLog, UserProfile, ReminderSettings, WorkStatus } from './types';
+import { DayLog, UserProfile, ReminderSettings, WorkStatus, TaskCategory } from './types';
 import { initialUserProfile, initialReminderSettings, createSampleWeekLogs } from './data/mockData';
 import {
   getWeekMonday,
@@ -24,38 +24,36 @@ import { ReminderModal } from './components/ReminderModal';
 import { UserProfileModal } from './components/UserProfileModal';
 import { InAppReminderToast } from './components/InAppReminderToast';
 import { ConfirmClearModal } from './components/ConfirmClearModal';
+import { LiveTimerButton } from './components/LiveTimerButton';
 
 export default function App() {
-  // Database Loading State
   const [isDbLoaded, setIsDbLoaded] = useState(false);
-
-  // Current week selection
   const [mondayDate, setMondayDate] = useState<Date>(() => getWeekMonday(new Date()));
 
   // State Variables 
   const [user, setUser] = useState<UserProfile>(initialUserProfile);
   const [reminders, setReminders] = useState<ReminderSettings>(initialReminderSettings);
   const [weekLogsMap, setWeekLogsMap] = useState<Record<string, DayLog[]>>({});
+  const [activeSession, setActiveSession] = useState<{ clockInISO: string | null }>({ clockInISO: null });
 
   // Modals & UI State
   const [editingDay, setEditingDay] = useState<DayLog | null>(null);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [isRemindersOpen, setIsRemindersOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [calendarViewMode, setCalendarViewMode] = useState<'week' | 'list' | 'month'>('week');
   const [toast, setToast] = useState<{ id: string; type: 'clockIn' | 'clockOut'; title: string; message: string; time: string; } | null>(null);
   const [clearConfirm, setClearConfirm] = useState<{ type: 'day' | 'week'; dateStr?: string; } | null>(null);
 
-  // ==========================================
-  // 1. CLOUD SYNC: Read from Firebase (Real-time)
-  // ==========================================
+  // CLOUD SYNC: Read
   useEffect(() => {
     const docRef = doc(db, 'appData', 'my-timecard');
-
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         if (data.user) setUser(data.user);
         if (data.reminders) setReminders(data.reminders);
+        if (data.activeSession) setActiveSession(data.activeSession);
 
         if (data.weekLogsMap) {
           setWeekLogsMap(data.weekLogsMap);
@@ -67,17 +65,14 @@ export default function App() {
         const initialKey = formatDateKey(getWeekMonday(new Date()));
         const initialMap = { [initialKey]: createSampleWeekLogs(getWeekMonday(new Date())) };
         setWeekLogsMap(initialMap);
-        setDoc(docRef, { user: initialUserProfile, reminders: initialReminderSettings, weekLogsMap: initialMap });
+        setDoc(docRef, { user: initialUserProfile, reminders: initialReminderSettings, weekLogsMap: initialMap, activeSession: { clockInISO: null } });
       }
       setIsDbLoaded(true);
     });
-
     return () => unsubscribe();
   }, []);
 
-  // ==========================================
-  // 2. CLOUD SYNC: Write to Firebase (Sanitized)
-  // ==========================================
+  // CLOUD SYNC: Write
   useEffect(() => {
     if (!isDbLoaded) return;
     const cleanUser = JSON.parse(JSON.stringify(user));
@@ -96,7 +91,60 @@ export default function App() {
     setDoc(doc(db, 'appData', 'my-timecard'), { weekLogsMap: cleanWeekLogsMap }, { merge: true });
   }, [weekLogsMap, isDbLoaded]);
 
-  // Show loading screen while connecting to cloud
+  useEffect(() => {
+    if (!isDbLoaded) return;
+    setDoc(doc(db, 'appData', 'my-timecard'), { activeSession }, { merge: true });
+  }, [activeSession, isDbLoaded]);
+
+  // Task Memory Engine
+  const recentTasks = useMemo(() => {
+    const tasksList: { title: string; category: TaskCategory; projectName?: string }[] = [];
+    const seen = new Set<string>();
+
+    const allDays: DayLog[] = [];
+    Object.values(weekLogsMap).forEach((week) => {
+      if (Array.isArray(week)) {
+        allDays.push(...week);
+      }
+    });
+
+    allDays.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+    allDays.forEach(day => {
+      const dayTasks = day.tasks || [];
+      if (dayTasks.length === 0) return;
+
+      [...dayTasks].reverse().forEach(t => {
+        const titleSafe = t.title || '';
+        const key = `${titleSafe.toLowerCase().trim()}-${t.category}`;
+
+        if (!seen.has(key)) {
+          seen.add(key);
+          tasksList.push({ title: titleSafe, category: t.category, projectName: t.projectName });
+        }
+      });
+    });
+
+    return tasksList.slice(0, 8);
+  }, [weekLogsMap]);
+
+  // NEW: Annual PTO Calculator
+  const usedPTOThisYear = useMemo(() => {
+    let total = 0;
+    const currentYear = new Date().getFullYear().toString();
+
+    Object.values(weekLogsMap).forEach((week) => {
+      if (Array.isArray(week)) {
+        week.forEach(day => {
+          if (day.date && day.date.startsWith(currentYear)) {
+            total += (day.timeOffHours || 0);
+          }
+        });
+      }
+    });
+    return total;
+  }, [weekLogsMap]);
+
   if (!isDbLoaded) {
     return (
       <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center font-sans">
@@ -107,18 +155,83 @@ export default function App() {
   }
 
   const currentMondayKey = formatDateKey(mondayDate);
-
   const currentDays: DayLog[] = weekLogsMap[currentMondayKey] || (() => {
     return getDaysOfWeek(mondayDate).map(d => ({
       date: formatDateKey(d), status: 'working' as WorkStatus, startTime: '', endTime: '', totalActiveHours: 0, notes: '', tasks: [], breaks: []
     }));
   })();
 
-  const totalWeeklyHours = currentDays.reduce((sum, d) => sum + (d.totalActiveHours || 0), 0);
+  const totalWeeklyHours = currentDays.reduce((sum, d) => sum + (d.totalActiveHours || 0) + (d.timeOffHours || 0), 0);
 
   const handlePrevWeek = () => setMondayDate(prev => shiftWeek(prev, -1));
   const handleNextWeek = () => setMondayDate(prev => shiftWeek(prev, 1));
   const handleToday = () => setMondayDate(getWeekMonday(new Date()));
+
+  const handleClockIn = () => {
+    setActiveSession({ clockInISO: new Date().toISOString() });
+  };
+
+  const handleClockOut = () => {
+    if (!activeSession.clockInISO) return;
+
+    const exactClockInDate = new Date(activeSession.clockInISO);
+    const exactClockOutDate = new Date();
+
+    const roundDownTo15 = (date: Date) => {
+      const rounded = new Date(date);
+      rounded.setMinutes(Math.floor(rounded.getMinutes() / 15) * 15);
+      rounded.setSeconds(0);
+      rounded.setMilliseconds(0);
+      return rounded;
+    };
+
+    const clockInDate = roundDownTo15(exactClockInDate);
+    const clockOutDate = roundDownTo15(exactClockOutDate);
+
+    const todayOut = new Date();
+    const todayKey = formatDateKey(todayOut);
+    const todayMonday = getWeekMonday(todayOut);
+    const mondayKey = formatDateKey(todayMonday);
+
+    const formatTime = (d: Date) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+
+    let updatedTargetDay: DayLog | null = null;
+
+    setWeekLogsMap(prev => {
+      const week = prev[mondayKey] || createSampleWeekLogs(todayMonday);
+      const updatedWeek = week.map(d => {
+        if (d.date === todayKey) {
+          const newStart = d.startTime || formatTime(clockInDate);
+          const newEnd = formatTime(clockOutDate);
+          updatedTargetDay = { ...d, status: 'working', startTime: newStart, endTime: newEnd };
+          return updatedTargetDay;
+        }
+        return d;
+      });
+      return { ...prev, [mondayKey]: updatedWeek };
+    });
+
+    setActiveSession({ clockInISO: null });
+
+    if (updatedTargetDay) {
+      setMondayDate(todayMonday);
+      setEditingDay(updatedTargetDay);
+    }
+  };
+
+  const getPreviousDayLog = (currentDateStr: string): DayLog | null => {
+    const [y, m, d] = currentDateStr.split('-').map(Number);
+    const prevDate = new Date(y, m - 1, d - 1);
+    const prevKey = formatDateKey(prevDate);
+    const prevMondayKey = formatDateKey(getWeekMonday(prevDate));
+
+    if (prevMondayKey === currentMondayKey) return currentDays.find(day => day.date === prevKey) || null;
+    const prevWeek = weekLogsMap[prevMondayKey];
+    if (prevWeek) return prevWeek.find(day => day.date === prevKey) || null;
+    return null;
+  };
+
+  const previousDayLog = editingDay ? getPreviousDayLog(editingDay.date) : null;
 
   const handleSaveDayLog = (updatedLog: DayLog) => {
     const updatedWeek = currentDays.map(d => d.date === updatedLog.date ? updatedLog : d);
@@ -138,7 +251,7 @@ export default function App() {
   const handleClearDay = (dateStr: string) => {
     const updatedWeek = currentDays.map(d => {
       if (d.date === dateStr) {
-        return { ...d, status: 'working' as WorkStatus, startTime: '', endTime: '', totalActiveHours: 0, notes: '', tasks: [], breaks: [], nonWorkingReason: '', isManualHoursOverride: false };
+        return { ...d, status: 'working' as WorkStatus, startTime: '', endTime: '', totalActiveHours: 0, timeOffHours: 0, notes: '', tasks: [], breaks: [], nonWorkingReason: '', isManualHoursOverride: false };
       }
       return d;
     });
@@ -147,7 +260,7 @@ export default function App() {
 
   const handleClearWeek = () => {
     const clearedWeek = currentDays.map(d => ({
-      ...d, status: 'working' as WorkStatus, startTime: '', endTime: '', totalActiveHours: 0, notes: '', tasks: [], breaks: [], nonWorkingReason: '', isManualHoursOverride: false
+      ...d, status: 'working' as WorkStatus, startTime: '', endTime: '', totalActiveHours: 0, timeOffHours: 0, notes: '', tasks: [], breaks: [], nonWorkingReason: '', isManualHoursOverride: false
     }));
     setWeekLogsMap(prev => ({ ...prev, [currentMondayKey]: clearedWeek }));
   };
@@ -189,15 +302,30 @@ export default function App() {
         user={user} totalWeeklyHours={totalWeeklyHours} reminders={reminders}
         onOpenReport={() => setIsReportOpen(true)} onOpenReminders={() => setIsRemindersOpen(true)}
         onOpenProfile={() => setIsProfileOpen(true)} onExportCSV={() => exportToCSV(currentDays, user, mondayDate)}
-        onExportPDF={() => exportToPDF(currentDays, user, mondayDate, true)} onResetData={handleResetData} onClearWeek={() => setClearConfirm({ type: 'week' })}
+        onExportPDF={() => exportToPDF(currentDays, user, mondayDate, calendarViewMode === 'barebones' ? 'barebones' : 'detailed')}
+        onResetData={handleResetData} onClearWeek={() => setClearConfirm({ type: 'week' })}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        <WeeklyDashboard days={currentDays} targetHours={user.targetWeeklyHours || 40} />
-        <DesktopCalendarView days={currentDays} mondayDate={mondayDate} onEditDay={(day) => setEditingDay(day)} onQuickToggleStatus={handleQuickToggleStatus} onSelectDate={(date) => setMondayDate(getWeekMonday(date))} onClearDay={(dateStr) => setClearConfirm({ type: 'day', dateStr })} />
+        <LiveTimerButton clockInISO={activeSession.clockInISO} onClockIn={handleClockIn} onClockOut={handleClockOut} />
+
+        {/* WeeklyDashboard updated to pass the new PTO metrics */}
+        <WeeklyDashboard
+          days={currentDays}
+          targetHours={user.targetWeeklyHours || 40}
+          annualPTOAllowance={user.annualPTOAllowance || 120}
+          usedPTOThisYear={usedPTOThisYear}
+        />
+
+        <DesktopCalendarView
+          days={currentDays} mondayDate={mondayDate}
+          onEditDay={(day) => setEditingDay(day)} onQuickToggleStatus={handleQuickToggleStatus}
+          onSelectDate={(date) => setMondayDate(getWeekMonday(date))} onClearDay={(dateStr) => setClearConfirm({ type: 'day', dateStr })}
+          viewMode={calendarViewMode} onViewModeChange={setCalendarViewMode}
+        />
       </main>
 
-      {editingDay && <DayLogEditorModal isOpen={!!editingDay} onClose={() => setEditingDay(null)} dayLog={editingDay} onSave={handleSaveDayLog} />}
+      {editingDay && <DayLogEditorModal isOpen={!!editingDay} onClose={() => setEditingDay(null)} dayLog={editingDay} onSave={handleSaveDayLog} previousDayLog={previousDayLog} recentTasks={recentTasks} />}
       <ManagerReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} days={currentDays} user={user} mondayDate={mondayDate} />
       <ReminderModal isOpen={isRemindersOpen} onClose={() => setIsRemindersOpen(false)} reminders={reminders} onSaveReminders={(updated) => setReminders(updated)} onTriggerTestReminder={handleTriggerTestReminder} />
       <UserProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} user={user} onSaveProfile={(updated) => setUser(updated)} />

@@ -1,74 +1,65 @@
-import { DayLog, TaskItem } from '../types';
-import { format12HourTime } from './dateUtils';
+import { DayLog } from '../types';
 
 /**
- * Generates an executive daily summary from tasks and work status
+ * Generates a simple text summary for a single day's notes.
  */
-export function generateDailySummary(dayLog: DayLog): string {
+export const generateDailySummary = (dayLog: DayLog): string => {
   if (dayLog.status === 'non_working') {
-    return `STATUS: Non-Working Day\nREASON: ${dayLog.nonWorkingReason || 'Not specified'}\nNote: No active work hours logged for this date.`;
+    return `Out of office: ${dayLog.nonWorkingReason || 'Unspecified'}`;
+  }
+  if (!dayLog.tasks || dayLog.tasks.length === 0) {
+    return `Completed ${dayLog.totalActiveHours.toFixed(1)} hours of standard operational duties.`;
   }
 
-  const startTimeFormatted = format12HourTime(dayLog.startTime);
-  const endTimeFormatted = format12HourTime(dayLog.endTime);
-  const totalHours = dayLog.totalActiveHours;
-
-  let summary = `ACTIVE WORK HOURS: ${startTimeFormatted} – ${endTimeFormatted} (${totalHours} hrs total)\n`;
-
-  if (dayLog.tasks && dayLog.tasks.length > 0) {
-    summary += `\nKEY ACTIVITIES & DELIVERABLES:\n`;
-    
-    // Group tasks by category
-    const categoryMap = new Map<string, TaskItem[]>();
-    dayLog.tasks.forEach(task => {
-      const list = categoryMap.get(task.category) || [];
-      list.push(task);
-      categoryMap.set(task.category, list);
-    });
-
-    categoryMap.forEach((tasks, category) => {
-      summary += `• [${category.toUpperCase()}]\n`;
-      tasks.forEach(t => {
-        const projectTag = t.projectName ? ` (${t.projectName})` : '';
-        const desc = t.description ? ` - ${t.description}` : '';
-        summary += `   - ${t.title}${projectTag}: ${t.hours}h${desc}\n`;
-      });
-    });
-  } else {
-    summary += `\nNote: General active work carried out. No granular sub-tasks categorized.`;
-  }
-
-  if (dayLog.notes && dayLog.notes.trim().length > 0 && !dayLog.notes.includes('KEY ACTIVITIES & DELIVERABLES')) {
-    summary += `\nDAILY NOTES & CIRCUMSTANCES:\n${dayLog.notes}`;
-  }
-
-  return summary.trim();
-}
+  const taskNames = dayLog.tasks.map(t => t.title).join(', ');
+  return `Successfully advanced the following items today: ${taskNames}.`;
+};
 
 /**
- * Generates a weekly overview summary for the manager report
+ * Synthesizes a highly professional, 3-sentence weekly summary for a manager email
+ * by analyzing task categories and time spent.
  */
-export function generateWeeklyManagerOverview(days: DayLog[], totalHours: number, targetHours: number): string {
+export const generateWeeklyManagerOverview = (days: DayLog[], totalHours: number, targetHours: number): string => {
   const workingDays = days.filter(d => d.status === 'working');
-  const nonWorkingDays = days.filter(d => d.status === 'non_working');
 
-  let overview = `WEEKLY TIMECARD SUMMARY REPORT\n`;
-  overview += `Total Active Hours Logged: ${totalHours} hrs / Target: ${targetHours} hrs `;
-  
-  if (totalHours >= targetHours) {
-    overview += `(Goal Met: +${(totalHours - targetHours).toFixed(1)} hrs)\n`;
-  } else {
-    overview += `(Shortfall: ${(targetHours - totalHours).toFixed(1)} hrs remaining)\n`;
+  // Edge Case: No work done this week
+  if (workingDays.length === 0) {
+    return "I was out of the office for the entirety of this week and have logged my credited time accordingly.";
   }
 
-  overview += `Days Worked: ${workingDays.length} | Non-Working Days: ${nonWorkingDays.length}\n`;
+  const allTasks = workingDays.flatMap(d => d.tasks || []);
 
-  if (nonWorkingDays.length > 0) {
-    overview += `\nNON-WORKING DAYS SUMMARY:\n`;
-    nonWorkingDays.forEach(d => {
-      overview += `• ${d.date}: ${d.nonWorkingReason || 'No reason provided'}\n`;
-    });
+  // Edge Case: Worked, but no specific tasks were logged
+  if (allTasks.length === 0) {
+    return `This week, I completed ${totalHours.toFixed(1)} hours of routine operational duties and standard workflows. All daily responsibilities were managed effectively and within expectations. Please let me know if you need any additional details regarding my logged hours!`;
   }
 
-  return overview.trim();
-}
+  // 1. Find the primary focus (the category with the most hours)
+  const categoryHours: Record<string, number> = {};
+  allTasks.forEach(t => {
+    categoryHours[t.category] = (categoryHours[t.category] || 0) + t.hours;
+  });
+
+  const sortedCategories = Object.entries(categoryHours).sort((a, b) => b[1] - a[1]);
+  const topCategory = sortedCategories[0][0];
+
+  // 2. Find the top 2 biggest accomplishments (tasks with the most hours)
+  const sortedTasks = [...allTasks].sort((a, b) => b.hours - a.hours);
+  const topTasks = sortedTasks.slice(0, 2).map(t => t.title);
+
+  // 3. Assemble the synthesized sentences
+  let summary = `This week, I directed the majority of my focus toward ${topCategory} initiatives. `;
+
+  if (topTasks.length > 0) {
+    summary += `Key accomplishments included driving progress on "${topTasks[0]}"`;
+    if (topTasks.length > 1) {
+      summary += ` and successfully executing "${topTasks[1]}". `;
+    } else {
+      summary += `. `;
+    }
+  }
+
+  summary += "All regular communications and departmental workflows were maintained alongside these primary objectives.";
+
+  return summary;
+};

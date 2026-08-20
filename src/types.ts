@@ -3,9 +3,9 @@ export type WorkStatus = 'working' | 'non_working';
 export type NonWorkingReason =
   | 'PTO / Vacation'
   | 'Sick Leave'
-  | 'Sick' // NEW
-  | 'Weekend' // NEW
-  | 'Off' // NEW
+  | 'Sick'
+  | 'Weekend'
+  | 'Off'
   | 'Company Holiday'
   | 'Doctor Appointment'
   | 'Personal Leave'
@@ -32,12 +32,11 @@ export interface TaskItem {
   description?: string;
 }
 
-// NEW: Interface for tracking breaks/OOO within a working day
 export interface BreakItem {
   id: string;
-  startTime: string; // 24h format
-  endTime: string;   // 24h format
-  reason: string;    // e.g., "Lunch", "Doctor", "School Run"
+  startTime: string;
+  endTime: string;
+  reason: string;
 }
 
 export interface DayLog {
@@ -47,10 +46,11 @@ export interface DayLog {
   startTime: string;
   endTime: string;
   totalActiveHours: number;
+  timeOffHours?: number;
   isManualHoursOverride?: boolean;
   notes: string;
   tasks: TaskItem[];
-  breaks?: BreakItem[]; // NEW: Added breaks array
+  breaks?: BreakItem[];
 }
 
 export interface UserProfile {
@@ -59,19 +59,20 @@ export interface UserProfile {
   department: string;
   managerName: string;
   managerEmail?: string;
-  targetWeeklyHours: number; // default 40
+  targetWeeklyHours: number;
+  annualPTOAllowance?: number; // <-- NEW: Tracks your global PTO cap
 }
 
 export interface ReminderSettings {
   enabled: boolean;
-  clockInTime: string; // e.g. "07:30"
-  clockOutTime: string; // e.g. "18:00"
-  weekdaysOnly: boolean; // default true
+  clockInTime: string;
+  clockOutTime: string;
+  weekdaysOnly: boolean;
   soundEnabled: boolean;
   desktopNotifications: boolean;
 }
 
 export interface CalendarWeek {
-  weekStartDate: string; // YYYY-MM-DD for Monday (or Sunday)
+  weekStartDate: string;
   days: DayLog[];
 }
